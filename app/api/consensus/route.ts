@@ -1,18 +1,41 @@
 import { generateObject, generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { anthropic } from '@ai-sdk/anthropic';
-import { google } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 
 // Allow this route to run for up to 60 seconds (synthesis takes time)
 export const maxDuration = 60;
 
+// Build model instances — use the user's key if provided, otherwise fall back to env vars
+function buildModels(keys: { openai?: string; anthropic?: string; google?: string }) {
+  const openai = createOpenAI({
+    apiKey: keys.openai || process.env.OPENAI_API_KEY || '',
+  });
+  const anthropic = createAnthropic({
+    apiKey: keys.anthropic || process.env.ANTHROPIC_API_KEY || '',
+  });
+  const google = createGoogleGenerativeAI({
+    apiKey: keys.google || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',
+  });
+
+  return {
+    gpt: openai('gpt-4o'),
+    claude: anthropic('claude-3-5-sonnet-20240620'),
+    gemini: google('gemini-1.5-pro-latest'),
+    // Synthesis always uses the app's OpenAI key (or user's if provided)
+    synthesizer: openai('gpt-4o'),
+  };
+}
+
 export async function POST(req: Request) {
   let prompt: string;
+  let userKeys: { openai?: string; anthropic?: string; google?: string } = {};
 
   try {
     const body = await req.json();
     prompt = body?.prompt;
+    userKeys = body?.keys ?? {};
   } catch {
     return Response.json({ error: "Invalid JSON in request body." }, { status: 400 });
   }
@@ -21,7 +44,14 @@ export async function POST(req: Request) {
     return Response.json({ error: "A non-empty 'prompt' field is required." }, { status: 400 });
   }
 
+  const models = buildModels(userKeys);
+
   console.log("1. Received Prompt:", prompt);
+  console.log("   Using custom keys:", {
+    openai: !!userKeys.openai,
+    anthropic: !!userKeys.anthropic,
+    google: !!userKeys.google,
+  });
 
   try {
     // PHASE 1: THE FAN-OUT
@@ -31,17 +61,17 @@ export async function POST(req: Request) {
     
     const [gptRes, claudeRes, geminiRes] = await Promise.allSettled([
       generateText({ 
-        model: openai('gpt-4o'), 
+        model: models.gpt, 
         prompt,
         system: "You are a helpful expert assistant. Be concise." 
       }),
       generateText({ 
-        model: anthropic('claude-3-5-sonnet-20240620'), 
+        model: models.claude, 
         prompt,
         system: "You are a helpful expert assistant. Be concise."
       }),
       generateText({ 
-        model: google('models/gemini-1.5-pro-latest'), 
+        model: models.gemini, 
         prompt,
         system: "You are a helpful expert assistant. Be concise."
       })
@@ -71,7 +101,7 @@ export async function POST(req: Request) {
     console.log("3. Synthesizing consensus...");
 
     const synthesis = await generateObject({
-      model: openai('gpt-4o'),
+      model: models.synthesizer,
       schema: z.object({
         consensus_score: z.number().describe("0-100 score of how much the models agree"),
         consensus_level: z.enum(['High', 'Medium', 'Low']).describe("Text label for the score"),

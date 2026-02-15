@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   Send,
   Loader2,
@@ -11,6 +11,9 @@ import {
   Sparkles,
   BrainCircuit,
   ArrowRight,
+  Settings,
+  KeyRound,
+  Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +22,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import ApiKeySettings, {
+  type UserApiKeys,
+  loadKeys,
+  connectedCount,
+} from "@/components/api-key-settings";
 
 // ── Types ──
 
@@ -222,7 +230,6 @@ function RawAnswerPanel({
 function LoadingSkeleton() {
   return (
     <div className="space-y-8 py-6 animate-in fade-in duration-500">
-      {/* Loading header */}
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="relative">
           <BrainCircuit className="size-10 text-primary pulse-soft" />
@@ -238,7 +245,6 @@ function LoadingSkeleton() {
         </div>
       </div>
 
-      {/* Skeleton blocks */}
       <div className="space-y-4">
         <div className="glass-subtle h-28 shimmer rounded-xl" />
         <div className="grid gap-3 sm:grid-cols-2">
@@ -249,7 +255,6 @@ function LoadingSkeleton() {
         <div className="glass-subtle h-16 shimmer rounded-xl" />
       </div>
 
-      {/* Progress dots */}
       <div className="flex items-center justify-center gap-1.5">
         {[0, 1, 2].map((i) => (
           <div
@@ -265,19 +270,114 @@ function LoadingSkeleton() {
   );
 }
 
+// ── Welcome Prompt (shown once on first visit) ──
+
+function WelcomePrompt({
+  onConnect,
+  onSkip,
+}: {
+  onConnect: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <div className="glass w-full max-w-lg p-6 space-y-6 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10">
+          <BrainCircuit className="size-7 text-primary" />
+        </div>
+        <h2 className="text-lg font-semibold tracking-tight">
+          Welcome to Consensus Engine
+        </h2>
+        <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
+          This app queries GPT-4o, Claude 3.5, and Gemini 1.5 simultaneously,
+          then cross-references their answers to surface agreement, conflicts,
+          and a synthesized truth.
+        </p>
+      </div>
+
+      <div className="space-y-2.5">
+        {/* Connect option */}
+        <button
+          onClick={onConnect}
+          className="glass-subtle flex w-full items-center gap-4 p-4 text-left transition-all hover:scale-[1.01] hover:shadow-md"
+        >
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+            <KeyRound className="size-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">Connect your own API keys</p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+              Use your own OpenAI, Anthropic, or Google accounts for
+              personalized, higher-limit access.
+            </p>
+          </div>
+          <ArrowRight className="size-4 text-muted-foreground" />
+        </button>
+
+        {/* Free tier option */}
+        <button
+          onClick={onSkip}
+          className="glass-subtle flex w-full items-center gap-4 p-4 text-left transition-all hover:scale-[1.01] hover:shadow-md"
+        >
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100/60 dark:bg-emerald-500/15">
+            <Zap className="size-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">Continue with free tier</p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+              No setup needed. Uses shared API keys with standard rate limits.
+            </p>
+          </div>
+          <ArrowRight className="size-4 text-muted-foreground" />
+        </button>
+      </div>
+
+      <p className="text-center text-[11px] text-muted-foreground/60">
+        You can connect or disconnect keys anytime from settings.
+      </p>
+    </div>
+  );
+}
+
 // ── Main Component ──
+
+const ONBOARDED_KEY = "consensus-engine-onboarded";
 
 export default function ConsensusEngine() {
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState<ConsensusResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [apiKeys, setApiKeys] = useState<UserApiKeys>({});
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load persisted keys and onboarding state on mount
+  useEffect(() => {
+    setApiKeys(loadKeys());
+    const onboarded = localStorage.getItem(ONBOARDED_KEY);
+    if (!onboarded) {
+      setShowWelcome(true);
+    }
+    setMounted(true);
+  }, []);
 
   const autoResize = useCallback((el: HTMLTextAreaElement) => {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, []);
+
+  const handleDismissWelcome = () => {
+    localStorage.setItem(ONBOARDED_KEY, "true");
+    setShowWelcome(false);
+  };
+
+  const handleConnectFromWelcome = () => {
+    handleDismissWelcome();
+    setSettingsOpen(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,10 +388,20 @@ export default function ConsensusEngine() {
     setResult(null);
 
     try {
+      // Only include non-empty keys
+      const keysToSend: UserApiKeys = {};
+      if (apiKeys.openai?.trim()) keysToSend.openai = apiKeys.openai.trim();
+      if (apiKeys.anthropic?.trim())
+        keysToSend.anthropic = apiKeys.anthropic.trim();
+      if (apiKeys.google?.trim()) keysToSend.google = apiKeys.google.trim();
+
       const res = await fetch("/api/consensus", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          keys: keysToSend,
+        }),
       });
 
       const data = await res.json();
@@ -321,6 +431,11 @@ export default function ConsensusEngine() {
     "How does quantum computing work?",
   ];
 
+  const numConnected = connectedCount(apiKeys);
+
+  // Don't render until client-side hydration is done (prevents flash)
+  if (!mounted) return null;
+
   return (
     <TooltipProvider>
       <div className="mesh-gradient flex min-h-screen flex-col items-center px-4 py-12 sm:px-6 lg:px-8">
@@ -337,187 +452,235 @@ export default function ConsensusEngine() {
             their responses are cross-referenced and synthesized into one
             verified answer.
           </p>
-        </header>
 
-        {/* ── Search Input ── */}
-        <form
-          onSubmit={handleSubmit}
-          className="glass w-full max-w-2xl p-1.5 animate-in fade-in slide-in-from-bottom-6 duration-700"
-          style={{ animationDelay: "100ms" }}
-        >
-          <div className="flex items-end gap-2">
-            <textarea
-              ref={inputRef}
-              value={prompt}
-              onChange={(e) => {
-                setPrompt(e.target.value);
-                autoResize(e.target);
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask a question to cross-check across AI models…"
-              rows={1}
-              className="flex-1 resize-none bg-transparent px-4 py-3 text-sm leading-relaxed placeholder:text-muted-foreground/60 focus:outline-none"
-              style={{
-                minHeight: "44px",
-                maxHeight: "120px",
-              }}
-              disabled={loading}
-            />
+          {/* Connection status + settings button */}
+          <div className="flex items-center gap-2 mt-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  type="submit"
-                  disabled={!prompt.trim() || loading}
-                  className="mb-1.5 mr-1.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed"
+                  onClick={() => setSettingsOpen(true)}
+                  className="glass-subtle flex items-center gap-2 px-3 py-1.5 text-xs transition-all hover:scale-105"
                 >
-                  {loading ? (
-                    <Loader2 className="size-4 animate-spin" />
+                  <Settings className="size-3.5 text-muted-foreground" />
+                  {numConnected > 0 ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-muted-foreground">
+                        {numConnected} key{numConnected !== 1 && "s"} connected
+                      </span>
+                    </span>
                   ) : (
-                    <Send className="size-4" />
+                    <span className="text-muted-foreground">
+                      Using free tier
+                    </span>
                   )}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Send query (Enter)</p>
+                <p>Manage API keys</p>
               </TooltipContent>
             </Tooltip>
           </div>
-        </form>
+        </header>
 
-        {/* ── Example Prompts ── */}
-        {!result && !loading && !error && (
-          <div
-            className="mt-5 flex flex-wrap justify-center gap-2 animate-in fade-in duration-500"
-            style={{ animationDelay: "300ms" }}
-          >
-            {examplePrompts.map((ep) => (
-              <button
-                key={ep}
-                onClick={() => {
-                  setPrompt(ep);
-                  inputRef.current?.focus();
-                }}
-                className="glass-subtle flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground transition-all hover:text-foreground hover:scale-105"
-              >
-                <ArrowRight className="size-3 opacity-40" />
-                {ep}
-              </button>
-            ))}
-          </div>
+        {/* ── Welcome Prompt (first visit) ── */}
+        {showWelcome && (
+          <WelcomePrompt
+            onConnect={handleConnectFromWelcome}
+            onSkip={handleDismissWelcome}
+          />
         )}
 
-        {/* ── Loading ── */}
-        {loading && (
-          <div className="glass mt-8 w-full max-w-2xl p-6">
-            <LoadingSkeleton />
-          </div>
-        )}
-
-        {/* ── Error ── */}
-        {error && (
-          <div className="glass mt-8 w-full max-w-2xl border-red-200/50 dark:border-red-500/20 p-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-start gap-3">
-              <XCircle className="mt-0.5 size-5 shrink-0 text-red-500" />
-              <div>
-                <p className="text-sm font-medium text-red-700 dark:text-red-400">
-                  Something went wrong
-                </p>
-                <p className="mt-1 text-xs text-red-600/80 dark:text-red-300/60">
-                  {error}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Results ── */}
-        {result && (
-          <div className="mt-8 w-full max-w-2xl space-y-5 animate-in fade-in slide-in-from-bottom-6 duration-700">
-            {/* Score + Summary Card */}
-            <div className="glass p-6">
-              <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-                <ScoreRing
-                  score={result.consensus_score}
-                  level={result.consensus_level}
+        {/* ── Main UI (shown after onboarding) ── */}
+        {!showWelcome && (
+          <>
+            {/* ── Search Input ── */}
+            <form
+              onSubmit={handleSubmit}
+              className="glass w-full max-w-2xl p-1.5 animate-in fade-in slide-in-from-bottom-6 duration-700"
+              style={{ animationDelay: "100ms" }}
+            >
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={prompt}
+                  onChange={(e) => {
+                    setPrompt(e.target.value);
+                    autoResize(e.target);
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask a question to cross-check across AI models…"
+                  rows={1}
+                  className="flex-1 resize-none bg-transparent px-4 py-3 text-sm leading-relaxed placeholder:text-muted-foreground/60 focus:outline-none"
+                  style={{
+                    minHeight: "44px",
+                    maxHeight: "120px",
+                  }}
+                  disabled={loading}
                 />
-                <div className="flex-1 space-y-3 text-center sm:text-left">
-                  <div className="flex items-center justify-center gap-2 sm:justify-start">
-                    <Sparkles className="size-4 text-primary" />
-                    <h2 className="text-base font-semibold">
-                      Synthesized Answer
-                    </h2>
-                  </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {result.summary}
-                  </p>
-                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="submit"
+                      disabled={!prompt.trim() || loading}
+                      className="mb-1.5 mr-1.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Send query (Enter)</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
-            </div>
+            </form>
 
-            {/* Claims */}
-            <div className="glass p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-primary" />
-                <h3 className="text-sm font-semibold">
-                  Fact-Checked Claims
-                </h3>
-                <Badge variant="secondary" className="ml-auto text-[10px]">
-                  {result.claims.length} claim{result.claims.length !== 1 && "s"}
-                </Badge>
-              </div>
-              <div className="space-y-3">
-                {result.claims.map((claim, i) => (
-                  <ClaimCard key={i} claim={claim} index={i} />
+            {/* ── Example Prompts ── */}
+            {!result && !loading && !error && (
+              <div
+                className="mt-5 flex flex-wrap justify-center gap-2 animate-in fade-in duration-500"
+                style={{ animationDelay: "300ms" }}
+              >
+                {examplePrompts.map((ep) => (
+                  <button
+                    key={ep}
+                    onClick={() => {
+                      setPrompt(ep);
+                      inputRef.current?.focus();
+                    }}
+                    className="glass-subtle flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground transition-all hover:text-foreground hover:scale-105"
+                  >
+                    <ArrowRight className="size-3 opacity-40" />
+                    {ep}
+                  </button>
                 ))}
               </div>
-            </div>
+            )}
 
-            {/* Conflicts */}
-            {result.conflicts && result.conflicts.length > 0 && (
-              <div className="glass border-amber-200/40 dark:border-amber-500/15 p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <AlertTriangle className="size-4 text-amber-500" />
-                  <h3 className="text-sm font-semibold">
-                    Conflicts & Contradictions
-                  </h3>
-                </div>
-                <div className="space-y-3">
-                  {result.conflicts.map((conflict, i) => (
-                    <div key={i} className="glass-subtle p-4">
-                      <p className="text-sm font-medium">{conflict.topic}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        {conflict.description}
-                      </p>
-                    </div>
-                  ))}
+            {/* ── Loading ── */}
+            {loading && (
+              <div className="glass mt-8 w-full max-w-2xl p-6">
+                <LoadingSkeleton />
+              </div>
+            )}
+
+            {/* ── Error ── */}
+            {error && (
+              <div className="glass mt-8 w-full max-w-2xl border-red-200/50 dark:border-red-500/20 p-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-start gap-3">
+                  <XCircle className="mt-0.5 size-5 shrink-0 text-red-500" />
+                  <div>
+                    <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                      Something went wrong
+                    </p>
+                    <p className="mt-1 text-xs text-red-600/80 dark:text-red-300/60">
+                      {error}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Raw Answers */}
-            <div className="glass p-5">
-              <h3 className="mb-3 text-sm font-semibold">
-                Raw Model Responses
-              </h3>
-              <div className="space-y-2">
-                <RawAnswerPanel
-                  label="GPT-4o"
-                  text={result.raw_answers.gpt}
-                  color="bg-emerald-500"
-                />
-                <RawAnswerPanel
-                  label="Claude 3.5"
-                  text={result.raw_answers.claude}
-                  color="bg-orange-500"
-                />
-                <RawAnswerPanel
-                  label="Gemini 1.5"
-                  text={result.raw_answers.gemini}
-                  color="bg-blue-500"
-                />
+            {/* ── Results ── */}
+            {result && (
+              <div className="mt-8 w-full max-w-2xl space-y-5 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                {/* Score + Summary Card */}
+                <div className="glass p-6">
+                  <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+                    <ScoreRing
+                      score={result.consensus_score}
+                      level={result.consensus_level}
+                    />
+                    <div className="flex-1 space-y-3 text-center sm:text-left">
+                      <div className="flex items-center justify-center gap-2 sm:justify-start">
+                        <Sparkles className="size-4 text-primary" />
+                        <h2 className="text-base font-semibold">
+                          Synthesized Answer
+                        </h2>
+                      </div>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {result.summary}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Claims */}
+                <div className="glass p-5">
+                  <div className="mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-primary" />
+                    <h3 className="text-sm font-semibold">
+                      Fact-Checked Claims
+                    </h3>
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto text-[10px]"
+                    >
+                      {result.claims.length} claim
+                      {result.claims.length !== 1 && "s"}
+                    </Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {result.claims.map((claim, i) => (
+                      <ClaimCard key={i} claim={claim} index={i} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Conflicts */}
+                {result.conflicts && result.conflicts.length > 0 && (
+                  <div className="glass border-amber-200/40 dark:border-amber-500/15 p-5">
+                    <div className="mb-4 flex items-center gap-2">
+                      <AlertTriangle className="size-4 text-amber-500" />
+                      <h3 className="text-sm font-semibold">
+                        Conflicts & Contradictions
+                      </h3>
+                    </div>
+                    <div className="space-y-3">
+                      {result.conflicts.map((conflict, i) => (
+                        <div key={i} className="glass-subtle p-4">
+                          <p className="text-sm font-medium">
+                            {conflict.topic}
+                          </p>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            {conflict.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Raw Answers */}
+                <div className="glass p-5">
+                  <h3 className="mb-3 text-sm font-semibold">
+                    Raw Model Responses
+                  </h3>
+                  <div className="space-y-2">
+                    <RawAnswerPanel
+                      label="GPT-4o"
+                      text={result.raw_answers.gpt}
+                      color="bg-emerald-500"
+                    />
+                    <RawAnswerPanel
+                      label="Claude 3.5"
+                      text={result.raw_answers.claude}
+                      color="bg-orange-500"
+                    />
+                    <RawAnswerPanel
+                      label="Gemini 1.5"
+                      text={result.raw_answers.gemini}
+                      color="bg-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
 
         {/* ── Footer ── */}
@@ -526,6 +689,14 @@ export default function ConsensusEngine() {
           Cross-referencing does not guarantee correctness.
         </footer>
       </div>
+
+      {/* ── Settings Modal ── */}
+      <ApiKeySettings
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        keys={apiKeys}
+        onKeysChange={setApiKeys}
+      />
     </TooltipProvider>
   );
 }
