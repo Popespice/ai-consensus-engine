@@ -23,8 +23,8 @@ function buildModels(keys: { openai?: string; anthropic?: string; google?: strin
     gpt: openai('gpt-4o'),
     claude: anthropic('claude-3-5-sonnet-20240620'),
     gemini: google('gemini-1.5-pro-latest'),
-    // Synthesis always uses the app's OpenAI key (or user's if provided)
-    synthesizer: openai('gpt-4o'),
+    // Synthesis now uses Gemini 1.5 Pro to ensure neutral, unbiased filtering/summary
+    synthesizer: google('gemini-1.5-pro-latest'),
   };
 }
 
