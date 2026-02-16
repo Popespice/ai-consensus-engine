@@ -120,7 +120,7 @@ function ModelBadge({ name }: { name: string }) {
       "bg-emerald-100/70 text-emerald-700 border-emerald-200/60 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-400/20",
     "Claude 3.5 Sonnet":
       "bg-orange-100/70 text-orange-700 border-orange-200/60 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-400/20",
-    "Gemini 3 Flash":
+    "Gemini 2 Flash":
       "bg-blue-100/70 text-blue-700 border-blue-200/60 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-400/20",
   };
 
@@ -240,7 +240,7 @@ function LoadingSkeleton() {
             Querying three AI models…
           </p>
           <p className="text-xs text-muted-foreground">
-            GPT-5.2 · Claude 3.5 Sonnet · Gemini 3 Flash
+            GPT-5.2 · Claude 3.5 Sonnet · Gemini 2 Flash
           </p>
         </div>
       </div>
@@ -289,7 +289,7 @@ function WelcomePrompt({
           Welcome to Consensus Engine
         </h2>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-          This app queries GPT-5.2, Claude 3.5 Sonnet, and Gemini 3 Flash simultaneously,
+          This app queries GPT-5.2, Claude 3.5 Sonnet, and Gemini 2 Flash simultaneously,
           then cross-references their answers to surface agreement, conflicts,
           and a synthesized truth.
         </p>
@@ -672,7 +672,7 @@ export default function ConsensusEngine() {
                       color="bg-orange-500"
                     />
                     <RawAnswerPanel
-                      label="Gemini 3 Flash"
+                      label="Gemini 2 Flash"
                       text={result.raw_answers.gemini}
                       color="bg-blue-500"
                     />

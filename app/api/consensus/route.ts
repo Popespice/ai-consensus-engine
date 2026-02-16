@@ -20,11 +20,11 @@ function buildModels(keys: { openai?: string; anthropic?: string; google?: strin
   });
 
   return {
-    gpt: openai('gpt-5.2'),
+    gpt: openai('gpt-4o-mini'),
     claude: anthropic('claude-3-5-sonnet-20241022'),
-    gemini: google('gemini-3-flash'),
-    // Synthesis now uses Gemini 3 Flash to ensure neutral, unbiased filtering/summary
-    synthesizer: google('gemini-3-flash'),
+    gemini: google('gemini-2.0-flash'),
+    // Synthesis now uses Gemini 2.0 Flash to ensure neutral, unbiased filtering/summary
+    synthesizer: google('gemini-2.0-flash'),
   };
 }
 
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     // PHASE 1: THE FAN-OUT
     // We fire all three requests in parallel to save time.
     // Promise.allSettled ensures one failure doesn't kill the others.
-    console.log("2. Fetching answers from GPT-5.2, Claude 3.5 Sonnet, and Gemini 3 Flash...");
+    console.log("2. Fetching answers from GPT-5.2, Claude 3.5 Sonnet, and Gemini 2 Flash...");
     
     const [gptRes, claudeRes, geminiRes] = await Promise.allSettled([
       generateText({ 
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
       const failures = [
         gptRes.status === 'rejected' ? `GPT-5.2: ${gptRes.reason}` : null,
         claudeRes.status === 'rejected' ? `Claude 3.5 Sonnet: ${claudeRes.reason}` : null,
-        geminiRes.status === 'rejected' ? `Gemini 3 Flash: ${geminiRes.reason}` : null,
+        geminiRes.status === 'rejected' ? `Gemini 2 Flash: ${geminiRes.reason}` : null,
       ].filter(Boolean);
       console.error("Too many model failures:", failures);
       return Response.json(
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
         summary: z.string().describe("A single, cohesive answer blending the best parts."),
         claims: z.array(z.object({
           text: z.string().describe("A specific fact or statement from the summary"),
-          supporters: z.array(z.enum(['GPT-5.2', 'Claude 3.5 Sonnet', 'Gemini 3 Flash'])),
+          supporters: z.array(z.enum(['GPT-5.2', 'Claude 3.5 Sonnet', 'Gemini 2 Flash'])),
           dissenters: z.array(z.string()).describe("Names of models that disagree"),
           warning: z.string().optional().describe("If there is dissent, explain why briefly."),
         })),
@@ -129,7 +129,7 @@ export async function POST(req: Request) {
         ${claudeText ?? "[MODEL UNAVAILABLE]"}
 
         ---
-        MODEL C (Gemini 3 Flash): 
+        MODEL C (Gemini 2 Flash): 
         ${geminiText ?? "[MODEL UNAVAILABLE]"}
 
         ---

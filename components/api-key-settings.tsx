@@ -56,7 +56,7 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     id: "google",
-    name: "Gemini 3 Flash",
+    name: "Gemini 2 Flash",
     label: "Google AI",
     placeholder: "AIza…",
     docsUrl: "https://aistudio.google.com/app/apikey",
