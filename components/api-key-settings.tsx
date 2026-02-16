@@ -118,7 +118,8 @@ export default function ApiKeySettings({
       setDraft({ ...keys });
       setReveals({});
     }
-  }, [open, keys]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
@@ -181,7 +182,7 @@ export default function ApiKeySettings({
           <div className="space-y-0.5">
             <p className="text-xs font-medium">Keys stay on your device</p>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Your API keys are stored in your browser's local storage and sent
+              Your API keys are stored in your browser&apos;s local storage and sent
               directly to each provider. They are never saved on our servers. No
               keys? No problem — the free tier works with our shared keys.
             </p>
