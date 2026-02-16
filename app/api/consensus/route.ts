@@ -20,11 +20,11 @@ function buildModels(keys: { openai?: string; anthropic?: string; google?: strin
   });
 
   return {
-    gpt: openai('gpt-4o'),
-    claude: anthropic('claude-3-5-sonnet-20240620'),
-    gemini: google('gemini-1.5-pro-latest'),
-    // Synthesis now uses Gemini 1.5 Pro to ensure neutral, unbiased filtering/summary
-    synthesizer: google('gemini-1.5-pro-latest'),
+    gpt: openai('gpt-4o-mini'),
+    claude: anthropic('claude-3-5-sonnet-20241022'),
+    gemini: google('gemini-1.5-flash'),
+    // Synthesis now uses Gemini 1.5 Flash to ensure neutral, unbiased filtering/summary
+    synthesizer: google('gemini-1.5-flash'),
   };
 }
 
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
         summary: z.string().describe("A single, cohesive answer blending the best parts."),
         claims: z.array(z.object({
           text: z.string().describe("A specific fact or statement from the summary"),
-          supporters: z.array(z.enum(['GPT-4o', 'Claude 3.5', 'Gemini 1.5'])),
+          supporters: z.array(z.enum(['GPT-4o Mini', 'Claude 3.5 Sonnet', 'Gemini 1.5 Flash'])),
           dissenters: z.array(z.string()).describe("Names of models that disagree"),
           warning: z.string().optional().describe("If there is dissent, explain why briefly."),
         })),
@@ -121,15 +121,15 @@ export async function POST(req: Request) {
         USER QUESTION: "${prompt}"
 
         ---
-        MODEL A (GPT-4o): 
+        MODEL A (GPT-4o Mini): 
         ${gptText ?? "[MODEL UNAVAILABLE]"}
 
         ---
-        MODEL B (Claude 3.5): 
+        MODEL B (Claude 3.5 Sonnet): 
         ${claudeText ?? "[MODEL UNAVAILABLE]"}
 
         ---
-        MODEL C (Gemini 1.5): 
+        MODEL C (Gemini 1.5 Flash): 
         ${geminiText ?? "[MODEL UNAVAILABLE]"}
 
         ---

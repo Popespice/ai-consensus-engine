@@ -26,6 +26,7 @@ interface ProviderConfig {
   label: string;
   placeholder: string;
   docsUrl: string;
+  webUrl: string;
   color: string;
   dotColor: string;
 }
@@ -33,30 +34,33 @@ interface ProviderConfig {
 const PROVIDERS: ProviderConfig[] = [
   {
     id: "openai",
-    name: "GPT-4o",
+    name: "GPT-4o Mini",
     label: "OpenAI",
     placeholder: "sk-…",
     docsUrl: "https://platform.openai.com/api-keys",
+    webUrl: "https://chatgpt.com",
     color:
       "bg-emerald-100/70 text-emerald-700 border-emerald-200/60 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-400/20",
     dotColor: "bg-emerald-500",
   },
   {
     id: "anthropic",
-    name: "Claude 3.5",
+    name: "Claude 3.5 Sonnet",
     label: "Anthropic",
     placeholder: "sk-ant-…",
     docsUrl: "https://console.anthropic.com/settings/keys",
+    webUrl: "https://claude.ai",
     color:
       "bg-orange-100/70 text-orange-700 border-orange-200/60 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-400/20",
     dotColor: "bg-orange-500",
   },
   {
     id: "google",
-    name: "Gemini 1.5",
+    name: "Gemini 1.5 Flash",
     label: "Google AI",
     placeholder: "AIza…",
     docsUrl: "https://aistudio.google.com/app/apikey",
+    webUrl: "https://gemini.google.com",
     color:
       "bg-blue-100/70 text-blue-700 border-blue-200/60 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-400/20",
     dotColor: "bg-blue-500",
@@ -209,15 +213,25 @@ export default function ApiKeySettings({
                       ({provider.name})
                     </span>
                   </div>
-                  <a
-                    href={provider.docsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[11px] text-primary hover:underline"
-                  >
-                    Get key
-                    <ExternalLink className="size-3" />
-                  </a>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={provider.webUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Web Chat ↗
+                    </a>
+                    <a
+                      href={provider.docsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[11px] text-primary hover:underline font-medium"
+                    >
+                      Get API Key
+                      <ExternalLink className="size-3" />
+                    </a>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">

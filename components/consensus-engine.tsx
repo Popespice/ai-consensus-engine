@@ -116,11 +116,11 @@ function ScoreRing({ score, level }: { score: number; level: string }) {
 
 function ModelBadge({ name }: { name: string }) {
   const colors: Record<string, string> = {
-    "GPT-4o":
+    "GPT-4o Mini":
       "bg-emerald-100/70 text-emerald-700 border-emerald-200/60 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-400/20",
-    "Claude 3.5":
+    "Claude 3.5 Sonnet":
       "bg-orange-100/70 text-orange-700 border-orange-200/60 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-400/20",
-    "Gemini 1.5":
+    "Gemini 1.5 Flash":
       "bg-blue-100/70 text-blue-700 border-blue-200/60 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-400/20",
   };
 
@@ -240,7 +240,7 @@ function LoadingSkeleton() {
             Querying three AI models…
           </p>
           <p className="text-xs text-muted-foreground">
-            GPT-4o · Claude 3.5 · Gemini 1.5
+            GPT-4o Mini · Claude 3.5 Sonnet · Gemini 1.5 Flash
           </p>
         </div>
       </div>
@@ -289,7 +289,7 @@ function WelcomePrompt({
           Welcome to Consensus Engine
         </h2>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-          This app queries GPT-4o, Claude 3.5, and Gemini 1.5 simultaneously,
+          This app queries GPT-4o Mini, Claude 3.5 Sonnet, and Gemini 1.5 Flash simultaneously,
           then cross-references their answers to surface agreement, conflicts,
           and a synthesized truth.
         </p>
@@ -662,17 +662,17 @@ export default function ConsensusEngine() {
                   </h3>
                   <div className="space-y-2">
                     <RawAnswerPanel
-                      label="GPT-4o"
+                      label="GPT-4o Mini"
                       text={result.raw_answers.gpt}
                       color="bg-emerald-500"
                     />
                     <RawAnswerPanel
-                      label="Claude 3.5"
+                      label="Claude 3.5 Sonnet"
                       text={result.raw_answers.claude}
                       color="bg-orange-500"
                     />
                     <RawAnswerPanel
-                      label="Gemini 1.5"
+                      label="Gemini 1.5 Flash"
                       text={result.raw_answers.gemini}
                       color="bg-blue-500"
                     />

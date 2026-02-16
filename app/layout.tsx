@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Consensus Engine — Multi-AI Truth Finder",
-  description: "Ask a question and get a synthesized, fact-checked answer from GPT-4o, Claude 3.5, and Gemini 1.5.",
+  description: "Ask a question and get a synthesized, fact-checked answer from GPT-4o Mini, Claude 3.5 Sonnet, and Gemini 1.5 Flashd Gemini 1.5 Flash.",
 };
 
 export default function RootLayout({
