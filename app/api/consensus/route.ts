@@ -23,8 +23,8 @@ function buildModels(keys: { openai?: string; anthropic?: string; google?: strin
     gpt: openai('gpt-4o-mini'),
     claude: anthropic('claude-3-5-sonnet-20241022'),
     gemini: google('gemini-2.0-flash'),
-    // Synthesis now uses Gemini 2.0 Flash to ensure neutral, unbiased filtering/summary
-    synthesizer: google('gemini-2.0-flash'),
+    // Synthesis now uses GPT-4o Mini (Label: GPT-5.2) to reduce rate limit issues and improve synthesis speed
+    synthesizer: openai('gpt-4o-mini'),
   };
 }
 
