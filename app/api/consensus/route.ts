@@ -54,54 +54,94 @@ export async function POST(req: Request) {
   });
 
   try {
-    // PHASE 1: THE FAN-OUT
-    // We fire all three requests in parallel to save time.
-    // Promise.allSettled ensures one failure doesn't kill the others.
-    console.log("2. Fetching answers from GPT-5.2, Claude 3.5 Sonnet, and Gemini 2 Flash...");
-    
-    const [gptRes, claudeRes, geminiRes] = await Promise.allSettled([
-      generateText({ 
+    // PHASE 1: SEQUENTIAL EXECUTION (Gentler on Rate Limits)
+    // We execute requests one by one to avoid hitting "Requests Per Minute" limits on free tiers.
+    console.log("2. Fetching answers sequentially...");
+
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // 1. GPT-5.2 (GPT-4o Mini)
+    let gptText: string | null = null;
+    let gptError: string | null = null;
+    try {
+      console.log("   -> Querying GPT-5.2...");
+      const res = await generateText({ 
         model: models.gpt, 
         prompt,
         system: "You are a helpful expert assistant. Be concise." 
-      }),
-      generateText({ 
+      });
+      gptText = res.text;
+    } catch (err: any) {
+      console.error("      GPT-5.2 failed:", err.message);
+      gptError = err.message;
+    }
+
+    // Small delay between requests
+    await sleep(500);
+
+    // 2. Claude 3.5 Sonnet
+    let claudeText: string | null = null;
+    let claudeError: string | null = null;
+    try {
+      console.log("   -> Querying Claude 3.5 Sonnet...");
+      const res = await generateText({ 
         model: models.claude, 
         prompt,
         system: "You are a helpful expert assistant. Be concise."
-      }),
-      generateText({ 
+      });
+      claudeText = res.text;
+    } catch (err: any) {
+      console.error("      Claude 3.5 failed:", err.message);
+      claudeError = err.message;
+    }
+
+    // Small delay between requests
+    await sleep(500);
+
+    // 3. Gemini 2 Flash
+    let geminiText: string | null = null;
+    let geminiError: string | null = null;
+    try {
+      console.log("   -> Querying Gemini 2 Flash...");
+      const res = await generateText({ 
         model: models.gemini, 
         prompt,
         system: "You are a helpful expert assistant. Be concise."
-      })
-    ]);
+      });
+      geminiText = res.text;
+    } catch (err: any) {
+      console.error("      Gemini failed:", err.message);
+      geminiError = err.message;
+    }
 
-    const gptText = gptRes.status === 'fulfilled' ? gptRes.value.text : null;
-    const claudeText = claudeRes.status === 'fulfilled' ? claudeRes.value.text : null;
-    const geminiText = geminiRes.status === 'fulfilled' ? geminiRes.value.text : null;
-
-    // We need at least two models to form a meaningful consensus
+    // We need at least one model to form a result (Consensus of 1 is just an answer)
+    // Previously required 2, but for debugging/reliability, 1 is fine.
     const successCount = [gptText, claudeText, geminiText].filter(Boolean).length;
-    if (successCount < 2) {
+
+    if (successCount === 0) {
       const failures = [
-        gptRes.status === 'rejected' ? `GPT-5.2: ${gptRes.reason}` : null,
-        claudeRes.status === 'rejected' ? `Claude 3.5 Sonnet: ${claudeRes.reason}` : null,
-        geminiRes.status === 'rejected' ? `Gemini 2 Flash: ${geminiRes.reason}` : null,
+        gptError ? `GPT-5.2: ${gptError}` : null,
+        claudeError ? `Claude 3.5 Sonnet: ${claudeError}` : null,
+        geminiError ? `Gemini 2 Flash: ${geminiError}` : null,
       ].filter(Boolean);
-      console.error("Too many model failures:", failures);
+      
       return Response.json(
-        { error: "Not enough models responded to form a consensus.", failures },
+        { error: "All models failed to respond.", failures },
         { status: 502 }
       );
     }
-
+    
     // PHASE 2: THE SYNTHESIS (The "Judge")
     // We feed the available answers into GPT-4o to generate the structured JSON.
+    // However, if GPT-4o keys are dead, we should fallback to Gemini if available.
     console.log("3. Synthesizing consensus...");
 
+    // Pick the best available model for synthesis
+    const synthesizerModel = (!gptError) ? models.gpt : (!geminiError) ? models.gemini : models.claude;
+    console.log(`   -> Using ${(!gptError) ? 'GPT' : (!geminiError) ? 'Gemini' : 'Claude'} for synthesis.`);
+
     const synthesis = await generateObject({
-      model: models.synthesizer,
+      model: synthesizerModel,
       schema: z.object({
         consensus_score: z.number().describe("0-100 score of how much the models agree"),
         consensus_level: z.enum(['High', 'Medium', 'Low']).describe("Text label for the score"),
