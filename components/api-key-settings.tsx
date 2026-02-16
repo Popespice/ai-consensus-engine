@@ -34,7 +34,7 @@ interface ProviderConfig {
 const PROVIDERS: ProviderConfig[] = [
   {
     id: "openai",
-    name: "GPT-4o Mini",
+    name: "GPT-5.2",
     label: "OpenAI",
     placeholder: "sk-…",
     docsUrl: "https://platform.openai.com/api-keys",
@@ -56,7 +56,7 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     id: "google",
-    name: "Gemini 1.5 Flash",
+    name: "Gemini 3 Flash",
     label: "Google AI",
     placeholder: "AIza…",
     docsUrl: "https://aistudio.google.com/app/apikey",
